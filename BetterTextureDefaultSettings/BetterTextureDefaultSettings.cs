@@ -31,6 +31,7 @@ namespace BetterTextureDefaultSettings
         {
             Harmony harmony = new Harmony($"{Author}.{Name}");
             Config = GetConfiguration();
+            Config.OnThisConfigurationChanged += e => e.Config.Save(true);
             Config.Save(true);
             harmony.PatchAll();
         }
@@ -38,6 +39,8 @@ namespace BetterTextureDefaultSettings
         [HarmonyPatch]
         private static class TextureComponentPatch
         {
+            private static readonly Type indicatorFieldType = typeof(Sync<TextureWrapMode>);
+
             private static readonly Dictionary<Type, ModConfigurationKey> supportedDefaults = new Dictionary<Type, ModConfigurationKey>()
             {
                 { typeof(Sync<TextureWrapMode>), TextureWrapMode },
@@ -45,6 +48,7 @@ namespace BetterTextureDefaultSettings
                 { typeof(Sync<Filtering>), MipMapFilter }
             };
 
+            [HarmonyPostfix]
             private static void Postfix(object __instance)
             {
                 var instanceFields = __instance.GetType().GetFields(AccessTools.all);
@@ -58,10 +62,11 @@ namespace BetterTextureDefaultSettings
                 }
             }
 
+            [HarmonyTargetMethods]
             private static IEnumerable<MethodBase> TargetMethods()
             {
                 var types = AccessTools.GetTypesFromAssembly(AccessTools.AllAssemblies().First(assembly => assembly.GetName().Name == "FrooxEngine"))
-                    .Where(type => !type.IsAbstract && type.GetFields(AccessTools.all).Any(field => supportedDefaults.ContainsKey(field.FieldType)));
+                    .Where(type => !type.IsAbstract && type.GetFields(AccessTools.all).Any(field => field.FieldType == indicatorFieldType));
 
                 Msg("Applying texture defaults to these Types:");
                 foreach (var type in types)
