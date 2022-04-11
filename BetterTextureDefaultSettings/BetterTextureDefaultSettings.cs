@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
+﻿using CodeX;
 using FrooxEngine;
-using FrooxEngine.LogiX;
 using HarmonyLib;
 using NeosModLoader;
 
@@ -11,6 +7,18 @@ namespace BetterTextureDefaultSettings
 {
     public class BetterTextureDefaultSettings : NeosMod
     {
+        public static ModConfiguration Config;
+        
+        [AutoRegisterConfigKey]
+        private static ModConfigurationKey<TextureWrapMode> TextureWrapMode = new ModConfigurationKey<TextureWrapMode>("TextureWrapMode", "Default Texture Wrap Mode.", ()=> FrooxEngine.TextureWrapMode.Clamp);
+        
+        [AutoRegisterConfigKey]
+        private static ModConfigurationKey<TextureFilterMode> TextureFilterMode = new ModConfigurationKey<TextureFilterMode>("TextureFilterMode", "Default Texture Filter Mode.", () => FrooxEngine.TextureFilterMode.Anisotropic);
+
+        [AutoRegisterConfigKey]
+        private static ModConfigurationKey<Filtering> MipMapFilter = new ModConfigurationKey<Filtering>("MipMapFilter", "Default MipMap Filter.", () => Filtering.Box);
+
+
         public override string Author => "Banane9";
         public override string Link => "https://github.com/Banane9/NeosBetterTextureDefaultSettings";
         public override string Name => "BetterTextureDefaultSettings";
@@ -19,55 +27,22 @@ namespace BetterTextureDefaultSettings
         public override void OnEngineInit()
         {
             Harmony harmony = new Harmony($"{Author}.{Name}");
+            Config = GetConfiguration();
+            Config.Save(true);
             harmony.PatchAll();
         }
 
-        [HarmonyPatch]
+        [HarmonyPatch(typeof(StaticTexture2D))]
         private static class TextureComponentPatch
         {
-            private static readonly Type syncTextureWrapModeType = typeof(Sync<TextureWrapMode>);
-            private static readonly FieldInfo syncWrapModeValueField = syncTextureWrapModeType.GetField(nameof(Sync<TextureWrapMode>.Value));
-            private static readonly string[] wrapModeFieldNames = new[] { "WrapModeU", "WrapModeV", "WrapModeW" };
-
-            private static void Postfix(object __instance/*Sync<TextureWrapMode> ___WrapModeU, Sync<TextureWrapMode> ___WrapModeV/*, Sync<TextureWrapMode> ___WrapModeW*/)
+            [HarmonyPostfix]
+            [HarmonyPatch("OnAwake")]
+            private static void Postfix(StaticTexture2D __instance)
             {
-                //Msg("Called for " + __instance.ToString());
-
-                foreach (var wrapModeFieldName in wrapModeFieldNames)
-                {
-                    Traverse.Create(__instance).Field(wrapModeFieldName).Property("Value").SetValue(TextureWrapMode.Clamp);
-                    /*var syncWrapModeField = __instance.GetType().GetField(wrapModeFieldName);
-
-                    if (syncWrapModeField == null)
-                        continue;
-
-                    syncWrapModeValueField.SetValue(syncWrapModeField.GetValue(__instance), TextureWrapMode.Clamp);*/
-                }
-
-                /*
-                ___WrapModeU.Value = TextureWrapMode.Clamp;
-                ___WrapModeV.Value = TextureWrapMode.Clamp;
-                ___WrapModeW.Value = TextureWrapMode.Clamp;*/
-            }
-
-            private static IEnumerable<MethodBase> TargetMethods()
-            {
-                var types = AccessTools.GetTypesFromAssembly(AccessTools.AllAssemblies().First(assembly => assembly.GetName().Name == "FrooxEngine"))
-                    .Where(type => type.GetFields(BindingFlags.Instance | BindingFlags.Public).Any(field => field.FieldType == syncTextureWrapModeType));
-
-                Msg("Found Types to Patch:");
-                foreach (var type in types)
-                    Msg(type.Name);
-
-                var methods = //types.SelectMany(type => type.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic));
-                    types.SelectMany(type => type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
-                    .Where(method => method.Name == "InitializeSyncMembers");
-
-                Msg("Found Methods to Patch:");
-                foreach (var method in methods)
-                    Msg(method.FullDescription());
-
-                return methods;
+                __instance.WrapModeU.Value = Config.GetValue(TextureWrapMode);
+                __instance.WrapModeV.Value = Config.GetValue(TextureWrapMode);
+                __instance.FilterMode.Value = Config.GetValue(TextureFilterMode);
+                __instance.MipMapFilter.Value = Config.GetValue(MipMapFilter);
             }
         }
     }
