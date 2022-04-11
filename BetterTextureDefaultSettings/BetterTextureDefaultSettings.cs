@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using FrooxEngine;
-using FrooxEngine.LogiX;
+﻿using FrooxEngine;
 using HarmonyLib;
 using NeosModLoader;
 
@@ -15,6 +10,9 @@ namespace BetterTextureDefaultSettings
         
         [AutoRegisterConfigKey]
         private static ModConfigurationKey<TextureWrapMode> TextureWrapMode = new ModConfigurationKey<TextureWrapMode>("TextureWrapMode", "Default Texture Wrap Mode.", ()=> FrooxEngine.TextureWrapMode.Clamp);
+        
+        [AutoRegisterConfigKey]
+        private static ModConfigurationKey<TextureFilterMode> TextureFilterMode = new ModConfigurationKey<TextureFilterMode>("TextureFilterMode", "Default Texture Filter Mode.", () => FrooxEngine.TextureFilterMode.Anisotropic);
 
         public override string Author => "Banane9";
         public override string Link => "https://github.com/Banane9/NeosBetterTextureDefaultSettings";
@@ -38,6 +36,7 @@ namespace BetterTextureDefaultSettings
             {
                 __instance.WrapModeU.Value = Config.GetValue(TextureWrapMode);
                 __instance.WrapModeV.Value = Config.GetValue(TextureWrapMode);
+                __instance.FilterMode.Value = Config.GetValue(TextureFilterMode);
             }
         }
     }
